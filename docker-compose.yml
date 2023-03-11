@@ -1,0 +1,45 @@
+version: '3.7'
+
+services:
+  db:
+    container_name: sahan-postgres
+    image: postgres:15.2-alpine
+    user: postgres
+    env_file: conf/postgres.env
+    environment:
+      POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=tr_TR
+      LC_COLLATE: tr_TR.UTF-8
+      LC_CTYPE: \'tr_TR.UTF-8\' TEMPLATE template0
+    restart: always
+  web:
+    container_name: sahan-web
+    build:
+      dockerfile: Dockerfile
+      context: .
+    command: gunicorn sahan.wsgi:application --bind 0.0.0.0:8000 --workers 4
+    expose:
+      - 8000
+    env_file:
+      - conf/django.env
+      - conf/postgres.env
+    volumes:
+      - static_volume:/code/static:rw
+      - media_volume:/code/media:rw
+    depends_on:
+      - db
+    restart: always
+  nginx:
+    container_name: sahan-nginx
+    build: ./nginx
+    restart: always
+    ports:
+      - "80:8080"
+      - "443:8080"
+    depends_on:
+      - web
+    volumes:
+      - static_volume:/home/app/web/static
+      - media_volume:/home/app/web/media
+volumes:
+  static_volume:
+  media_volume:
